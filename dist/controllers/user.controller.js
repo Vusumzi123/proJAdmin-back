@@ -34,21 +34,21 @@ exports.postUser = function (req, res, next) {
         let role;
         if (!userToSave.email) {
             res.status(400).json({ error: "the field email is required" });
-            return next();
+            return;
         }
         if (!userToSave.roleId) {
-            res.status(400).json({ error: "the fiel roleId is required" });
-            return next();
+            res.status(400).json({ error: "the field roleId is required" });
+            return;
         }
         if (!validator.isEmail(userToSave.email)) {
             res.status(400).json({ error: "the field email is not an email" });
-            return next();
+            return;
         }
         try {
             role = yield roleService.readRole(userToSave.roleId);
             userToSave['role'] = role;
             yield userService.createUser(req.body).then((saved) => {
-                res.status(200).json({
+                res.json({
                     message: "user created successfully",
                     timestamp: saved.createdAt,
                     id: saved._id
@@ -56,37 +56,36 @@ exports.postUser = function (req, res, next) {
             });
         }
         catch (error) {
-            res.status(500).json({ error: error });
-            return next();
+            res.status(500).json({ error: error.toString() });
+            return;
         }
+        return;
     });
 };
 exports.getUser = function (req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         logger_1.LOGGER.debug("[UserController.getUserById]", req.params.userId);
-        const userId = cypher.decrypt(req.params.userId);
-        if (validator.isEmail(userId)) {
-            logger_1.LOGGER.debug("[UserController.getUserByEmail]", userId);
-            try {
-                let fetchedUsr = yield userService.readUsers({ _id: userId });
-                fetchedUsr[0]['passWord'] = null;
-                res.status(200).json(fetchedUsr[0]);
-            }
-            catch (error) {
-                res.status(404).json({ error: error });
-                return next();
-            }
+        let userId = "";
+        try {
+            userId = cypher.decrypt(req.params.userId);
         }
-        else {
-            try {
-                let fetchedUsr = yield userService.readUsers({ _id: userId });
-                fetchedUsr[0]['passWord'] = null;
-                res.status(200).json(fetchedUsr[0]);
-            }
-            catch (error) {
-                res.status(404).json({ error: error });
-                return next();
-            }
+        catch (error) {
+            logger_1.LOGGER.error(error.toString());
+            res.status(400).json({ error: error.toString() });
+            return;
+        }
+        const query = validator.isEmail(userId) ? { email: userId } : { _id: userId };
+        logger_1.LOGGER.debug("[UserController.getUserByEmail]", userId);
+        try {
+            const fetchedUsr = yield userService.readUsers(query);
+            logger_1.LOGGER.debug(fetchedUsr);
+            fetchedUsr[0].password = null;
+            res.json(fetchedUsr[0]);
+        }
+        catch (error) {
+            logger_1.LOGGER.error(error.toString());
+            res.status(404).json({ error: "no user found", message: error.toString() });
+            return;
         }
     });
 };
@@ -103,8 +102,9 @@ exports.updateUser = function (req, res, next) {
             });
         }
         catch (error) {
-            res.status(500).json({ error: error });
-            return next();
+            logger_1.LOGGER.error(error.toString());
+            res.status(500).json({ error: error.toString() });
+            return;
         }
     });
 };

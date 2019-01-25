@@ -22,7 +22,8 @@ class Router {
         /*routes to handle user API*/
         router.post('/user', userController.postUser);
         router.route('/user/:userId')
-            .get(userController.getUser);
+            .get(userController.getUser)
+            .put(userController.updateUser);
         express.use(['/user', '/user/:userId'], router);
         // route to handle 404 not found endpoints
         router.get('*', function (req, res) {

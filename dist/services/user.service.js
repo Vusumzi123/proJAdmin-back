@@ -22,7 +22,7 @@ exports.readUsers = function (query) {
     return __awaiter(this, void 0, void 0, function* () {
         logger_1.LOGGER.info("fetching user");
         logger_1.LOGGER.debug("query:", query);
-        return userModel.User.find(query);
+        return userModel.User.find(query).populate('role');
     });
 };
 exports.updateUser = function (query, userDataToUpdate) {

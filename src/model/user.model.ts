@@ -1,6 +1,7 @@
 import {Document, Schema, model, Model} from 'mongoose';
 import {IUser} from '../interfaces/user.interface';
 import { Binary } from 'bson';
+import { Cypher } from '../util/cypher';
 
 export interface IUserModel extends IUser, Document{
 }
@@ -32,6 +33,20 @@ export var UserSchema: Schema = new Schema({
     passsword: String,
     isValidated: {type: Boolean, default: false},
 });
+
+UserSchema.pre('save', function(next) {
+    let user:IUserModel = this;
+    if(!this.isModified("password")) return next();
+    const cypher = new Cypher();
+    user.password =  cypher.encrypt(user.password);
+    return next();
+});
+
+UserSchema.methods.comparePass = (passIn): boolean => {
+    const cypher = new Cypher();
+    let dbPass = cypher.decrypt(this.passsword);
+    return  dbPass === passIn; 
+};
 
 UserSchema.methods.fullName = (): string  =>{
     return (`${this.firstName.trim()} ${this.lastName.trim()}`);

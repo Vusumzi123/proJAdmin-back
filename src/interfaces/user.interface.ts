@@ -8,4 +8,5 @@ export interface IUser {
     role?: IRole;
     project?: string;
     createdAt?: Date;
+    password?: String;
 }

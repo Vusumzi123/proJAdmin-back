@@ -6,6 +6,7 @@ import { User, IUserModel } from "../src/model/user.model";
 import * as userService from '../src/services/user.service';
 import { LOGGER } from '../src/util/logger';
 import { Cypher } from '../src/util/cypher';
+import assert = require('assert');
 
 chai.use(chaiHttp);
 const expect = chai.expect;
@@ -50,22 +51,31 @@ describe('user API POST Tests', () => {
             })
     });
 
-    it('should get the user from DB by it\'s ID', () => {
+    it('should get the user from DB by it\'s ID', (done) => {
         userService.createUser(usrData)
-            .then((generatedUsr) => {
-                LOGGER.info(generatedUsr.id);
+            .then((generatedUsr:IUserModel) => {
                 const encId = cypher.encrypt(generatedUsr.id);
                 const url =`/user/${encId}`;
-                LOGGER.info(url);
                 chai.request(app).get(url).set("Authorization", "Basic YWRtaW46cGFzc3dvcmQ=")
                     .then(res => {
-                        expect(res.body._id).to.eql(generatedUsr.id);
-                    })
-                    .catch((err) => {
-                        LOGGER.error(err);
-                    })
+                        assert(res.body._id === generatedUsr.id);
+                        done();
+                    });
             })
          
+    });
+
+    it('should get the user from DB by it\'s Email', (done) => {
+        userService.createUser(usrData)
+            .then((generatedUsr:IUserModel) => {
+                const encEmail:String = cypher.encrypt(generatedUsr.email);
+                const url =`/user/${encEmail}`;
+                chai.request(app).get(url).set("Authorization", "Basic YWRtaW46cGFzc3dvcmQ=")
+                    .then(res => {
+                        assert(res.body.email === generatedUsr.email);
+                        done();
+                    });
+            });
     });
 
 
