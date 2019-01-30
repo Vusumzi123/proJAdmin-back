@@ -26,7 +26,7 @@ exports.UserSchema = new mongoose_1.Schema({
         ref: 'role'
     },
     project: String,
-    passsword: String,
+    password: String,
     isValidated: { type: Boolean, default: false },
 });
 exports.UserSchema.pre('save', function (next) {
@@ -37,9 +37,10 @@ exports.UserSchema.pre('save', function (next) {
     user.password = cypher.encrypt(user.password);
     return next();
 });
-exports.UserSchema.methods.comparePass = (passIn) => {
+exports.UserSchema.methods.comparePass = function (passIn) {
+    const usr = this;
     const cypher = new cypher_1.Cypher();
-    let dbPass = cypher.decrypt(this.passsword);
+    let dbPass = cypher.decrypt(usr.password);
     return dbPass === passIn;
 };
 exports.UserSchema.methods.fullName = () => {

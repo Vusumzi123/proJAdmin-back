@@ -23,9 +23,12 @@ export class  Router {
         router.post('/user', userController.postUser);
         router.route('/user/:userId')
             .get( userController.getUser)
-            .put(userController.updateUser);
+            .put(userController.updateUser)
+            .delete(userController.deleteUser);
 
-        express.use(['/user', '/user/:userId'], router);
+        router.get('/users/:query', userController.getAllUsers);
+        
+        express.use(['/user', '/user/:userId', '/users/:query'], router);
 
         // route to handle 404 not found endpoints
         router.get('*', function(req, res){

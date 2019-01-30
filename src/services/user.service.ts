@@ -10,7 +10,7 @@ export var createUser = async function(user: IUser):Promise<userModel.IUserModel
 }
 
 export var readUsers = async function(query: Object): Promise<userModel.IUserModel[]> {
-    LOGGER.info("fetching user")
+    LOGGER.info("fetching user");
     LOGGER.debug("query:", query);
     return userModel.User.find(query).populate('role');
 }

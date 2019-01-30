@@ -13,7 +13,7 @@ before((done) => {
         });
 });
 
-beforeEach((done) => {
+afterEach((done) => {
     const {users} = mongoose.connection.collections;
     users.drop(() => {
         done();

@@ -6,6 +6,7 @@ import {IUser} from '../interfaces/user.interface';
 import { LOGGER } from '../util/logger';
 import { Cypher } from '../util/cypher';
 import { IUserModel } from '../model/user.model';
+import { Timestamp } from 'bson';
 
 const cypher = new Cypher();
 /**
@@ -40,16 +41,14 @@ export var postUser = async function(req: Request, res: Response, next: NextFunc
     try {
         role = await roleService.readRole(userToSave.roleId);
         userToSave['role'] = role;
-        await userService.createUser( <IUser>req.body ).then((saved) => {
-            res.json({
-                message: "user created successfully",
-                timestamp: saved.createdAt,
-                id: saved._id
-            });
+        const savedUsr = await userService.createUser( <IUser>req.body );
+        res.json({
+            message: "user created successfully",
+            timestamp: savedUsr.createdAt,
+            id: savedUsr._id
         });
     } catch (error) {
         res.status(500).json({error: error.toString()});
-        return;
     }
     return;
 } 
@@ -67,22 +66,31 @@ export var getUser = async function(req: Request, res: Response, next: NextFunct
     const query = validator.isEmail(userId) ? {email: userId}: {_id: userId};
     LOGGER.debug("[UserController.getUserByEmail]", userId);
     try {
-        const fetchedUsr:IUserModel[] = await  userService.readUsers(query);
+        let fetchedUsrs:IUserModel[] = await  userService.readUsers(query);
+        const fetchedUsr = fetchedUsrs.pop();
+        fetchedUsr.password = undefined;
         LOGGER.debug(fetchedUsr);
-        fetchedUsr[0].password = null;
-        res.json(fetchedUsr[0]);
+        res.json(fetchedUsr);
     } catch (error) {
         LOGGER.error(error.toString());
         res.status(404).json({error: "no user found", message: error.toString()});
-        return;
     }
 }
 
 export var updateUser = async function(req: Request, res: Response, next: NextFunction){
     const userToUpdate:IUser = req.body;
-    LOGGER.debug("[UserController.updateUserById]", req.body);
+    LOGGER.debug("[UserController.updateUser", req.body);
+    let userId = "";
     try {
-        const updatedUser = await userService.updateUser( {_id: req.param('userId') }, userToUpdate);
+        userId = cypher.decrypt(req.params.userId);
+    } catch (error) {
+        LOGGER.error(error.toString());
+        res.status(400).json({error: error.toString()});
+        return;
+    }
+    const query = validator.isEmail(userId) ? {email: userId} : {_id: userId};
+    try {
+        const updatedUser = await userService.updateUser( query, userToUpdate);
         res.status(200).json({
             message: "user updated successfully" ,
             timestamp: new Date().toString(),
@@ -91,7 +99,51 @@ export var updateUser = async function(req: Request, res: Response, next: NextFu
     } catch (error) {
         LOGGER.error(error.toString());
         res.status(500).json({error: error.toString()});
+    }
+}
+
+export var deleteUser = async function(req: Request, res: Response, next: NextFunction){
+    LOGGER.debug("[UserController.DeleteUser]", req.params.userId);
+    let userId = "";
+    try {
+        userId = cypher.decrypt(req.params.userId);
+    } catch (error) {
+        LOGGER.error(error.toString());
+        res.status(400).json({error: error.toString()});
         return;
     }
-    
+    const query = validator.isEmail(userId) ? {email: userId} : {_id: userId};
+    try {
+        const deletedUser: IUserModel = await userService.deleteUser(query);
+        res.json({
+            message: "Usere deleted successfully",
+            Timestamp: new Date().toString(),
+            id: deletedUser._id
+        })
+    } catch (error) {
+        LOGGER.error(error.toString());
+        res.status(500).json({error: error.toString()});
+    }
+}
+
+export var getAllUsers = async function(req: Request, res: Response, next: NextFunction){
+    LOGGER.debug("[UserController.getAllUsers", req.params.query);
+    let query:any = {};
+    try {
+        query = JSON.parse(cypher.decrypt(req.params.query));    
+    } catch (error) {
+        LOGGER.error(error.toString());
+        res.status(400).json({error: error.toString()});
+        return;
+    }
+    try {
+        const fetchedUsers:IUserModel[] = await userService.readUsers(query);
+        fetchedUsers.forEach(usr => {
+            usr.password = undefined;
+        })
+        res.json(fetchedUsers);
+    } catch (error) {
+        LOGGER.error({error: error.toString(), message: "No users found with that criteria"})
+    }
+
 }

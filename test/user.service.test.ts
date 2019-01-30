@@ -1,4 +1,4 @@
-import { User, IUserModel } from "../src/model/user.model";
+import { User, IUserModel, UserSchema } from "../src/model/user.model";
 import * as userService from '../src/services/user.service';
 import * as roleService from '../src/services/role.service';
 import * as assert from 'assert';
@@ -15,7 +15,7 @@ describe('save user to DB', () => {
     };
 
     afterEach(done => {
-        User.deleteOne({email: newUserData.email})
+        User.findOneAndDelete({email: newUserData.email})
             .then(() => {
                 done();
             });
@@ -70,7 +70,7 @@ describe('read user from DB', () => {
             })
     });
     afterEach(done => {
-        User.deleteOne({email: newUserData.email})
+        User.findOneAndDelete({email: newUserData.email})
             .then(() => {
                 done();
             });
@@ -83,3 +83,65 @@ describe('read user from DB', () => {
             }))
     })
 })
+
+describe('update User in DB', () => {
+    const newUserData: IUser = {
+        email: "D.O.GeeVz@gmail.com",
+        firstName: "Diego",
+        lastName: "Belmont"
+    };
+    const newEmail = "VusumziBelmont@gmail.com";
+    beforeEach(done => {
+        const userToCreate = new User(newUserData);
+        userToCreate.save()
+            .then(() => {
+                done();
+            })
+    });
+    afterEach(done => {
+        User.findOneAndDelete({email: newEmail})
+            .then(() => {
+                done();
+            });
+    });
+    it('should read and upsdate a user from the DB', (done) => {
+        userService.updateUser({email: newUserData.email}, { email: newEmail, isValidated: true })
+            .then((updatedUser) => {
+                return userService.readUsers({ _id: updatedUser.id });
+            })
+            .then(fetchedUser => {
+                assert(fetchedUser[0].email === newEmail);
+                done();
+            });
+    });
+
+    describe('delete user from DB', ()  => {
+        const newUserData: IUser = {
+            email: "D.O.GeeVz@gmail.com",
+            firstName: "Diego",
+            lastName: "Belmont"
+        };
+        beforeEach(done => {
+            const userToCreate = new User(newUserData);
+            userToCreate.save()
+                .then(() => {
+                    done();
+                });
+        });
+        
+        it('Deletes a user from the data base', (done) => {
+            userService.deleteUser({email: newUserData.email})
+                .then(deletedUsr => {
+                    LOGGER.debug("Del USR::");
+                    LOGGER.debug(deletedUsr);
+                    User.findOne({email: deletedUsr.id})
+                        .then(fetchedUsr => {
+                            LOGGER.debug("USR::");
+                            LOGGER.debug(fetchedUsr);
+                            assert(fetchedUsr === null);
+                            done();
+                        })
+                });
+        });
+    })
+});

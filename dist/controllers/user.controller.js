@@ -47,17 +47,15 @@ exports.postUser = function (req, res, next) {
         try {
             role = yield roleService.readRole(userToSave.roleId);
             userToSave['role'] = role;
-            yield userService.createUser(req.body).then((saved) => {
-                res.json({
-                    message: "user created successfully",
-                    timestamp: saved.createdAt,
-                    id: saved._id
-                });
+            const savedUsr = yield userService.createUser(req.body);
+            res.json({
+                message: "user created successfully",
+                timestamp: savedUsr.createdAt,
+                id: savedUsr._id
             });
         }
         catch (error) {
             res.status(500).json({ error: error.toString() });
-            return;
         }
         return;
     });
@@ -77,24 +75,34 @@ exports.getUser = function (req, res, next) {
         const query = validator.isEmail(userId) ? { email: userId } : { _id: userId };
         logger_1.LOGGER.debug("[UserController.getUserByEmail]", userId);
         try {
-            const fetchedUsr = yield userService.readUsers(query);
+            let fetchedUsrs = yield userService.readUsers(query);
+            const fetchedUsr = fetchedUsrs.pop();
+            fetchedUsr.password = undefined;
             logger_1.LOGGER.debug(fetchedUsr);
-            fetchedUsr[0].password = null;
-            res.json(fetchedUsr[0]);
+            res.json(fetchedUsr);
         }
         catch (error) {
             logger_1.LOGGER.error(error.toString());
             res.status(404).json({ error: "no user found", message: error.toString() });
-            return;
         }
     });
 };
 exports.updateUser = function (req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         const userToUpdate = req.body;
-        logger_1.LOGGER.debug("[UserController.updateUserById]", req.body);
+        logger_1.LOGGER.debug("[UserController.updateUser", req.body);
+        let userId = "";
         try {
-            const updatedUser = yield userService.updateUser({ _id: req.param('userId') }, userToUpdate);
+            userId = cypher.decrypt(req.params.userId);
+        }
+        catch (error) {
+            logger_1.LOGGER.error(error.toString());
+            res.status(400).json({ error: error.toString() });
+            return;
+        }
+        const query = validator.isEmail(userId) ? { email: userId } : { _id: userId };
+        try {
+            const updatedUser = yield userService.updateUser(query, userToUpdate);
             res.status(200).json({
                 message: "user updated successfully",
                 timestamp: new Date().toString(),
@@ -104,7 +112,57 @@ exports.updateUser = function (req, res, next) {
         catch (error) {
             logger_1.LOGGER.error(error.toString());
             res.status(500).json({ error: error.toString() });
+        }
+    });
+};
+exports.deleteUser = function (req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        logger_1.LOGGER.debug("[UserController.DeleteUser]", req.params.userId);
+        let userId = "";
+        try {
+            userId = cypher.decrypt(req.params.userId);
+        }
+        catch (error) {
+            logger_1.LOGGER.error(error.toString());
+            res.status(400).json({ error: error.toString() });
             return;
+        }
+        const query = validator.isEmail(userId) ? { email: userId } : { _id: userId };
+        try {
+            const deletedUser = yield userService.deleteUser(query);
+            res.json({
+                message: "Usere deleted successfully",
+                Timestamp: new Date().toString(),
+                id: deletedUser._id
+            });
+        }
+        catch (error) {
+            logger_1.LOGGER.error(error.toString());
+            res.status(500).json({ error: error.toString() });
+        }
+    });
+};
+exports.getAllUsers = function (req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        logger_1.LOGGER.debug("[UserController.getAllUsers", req.params.query);
+        let query = {};
+        try {
+            query = JSON.parse(cypher.decrypt(req.params.query));
+        }
+        catch (error) {
+            logger_1.LOGGER.error(error.toString());
+            res.status(400).json({ error: error.toString() });
+            return;
+        }
+        try {
+            const fetchedUsers = yield userService.readUsers(query);
+            fetchedUsers.forEach(usr => {
+                usr.password = undefined;
+            });
+            res.json(fetchedUsers);
+        }
+        catch (error) {
+            logger_1.LOGGER.error({ error: error.toString(), message: "No users found with that criteria" });
         }
     });
 };

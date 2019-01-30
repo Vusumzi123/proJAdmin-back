@@ -2,8 +2,10 @@ import {Document, Schema, model, Model} from 'mongoose';
 import {IUser} from '../interfaces/user.interface';
 import { Binary } from 'bson';
 import { Cypher } from '../util/cypher';
+import { LOGGER } from '../util/logger';
 
 export interface IUserModel extends IUser, Document{
+    comparePass?;
 }
 
 export var UserSchema: Schema = new Schema({
@@ -30,7 +32,7 @@ export var UserSchema: Schema = new Schema({
         ref: 'role'
     },
     project: String,
-    passsword: String,
+    password: String,
     isValidated: {type: Boolean, default: false},
 });
 
@@ -42,10 +44,11 @@ UserSchema.pre('save', function(next) {
     return next();
 });
 
-UserSchema.methods.comparePass = (passIn): boolean => {
+UserSchema.methods.comparePass = function(passIn): boolean {
+    const usr = this;
     const cypher = new Cypher();
-    let dbPass = cypher.decrypt(this.passsword);
-    return  dbPass === passIn; 
+    let dbPass = cypher.decrypt(usr.password);
+    return  dbPass === passIn;
 };
 
 UserSchema.methods.fullName = (): string  =>{

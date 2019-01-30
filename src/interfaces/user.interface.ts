@@ -9,4 +9,5 @@ export interface IUser {
     project?: string;
     createdAt?: Date;
     password?: String;
+    isValidated?: boolean;
 }
